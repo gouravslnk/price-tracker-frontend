@@ -4,10 +4,11 @@ Modern, real-time React + Vite frontend for tracking product prices, viewing pri
 
 ---
 
-## 🚀 Live Deployments
+## 🚀 Live Deployments & Demo
 
 - **Frontend (Vercel)**: [https://price-tracker-frontend-gray.vercel.app](https://price-tracker-frontend-gray.vercel.app)
 - **Backend API (Render)**: [https://price-tracker-backend-352r.onrender.com](https://price-tracker-backend-352r.onrender.com)
+- **Headed Scraper Demo Recording**: [Google Drive Video Demo](https://drive.google.com/file/d/1-X1a9-u7oqQ_UsXIBzuHLADjCHcQbITA/view?usp=sharing)
 - **Target Mock Storefront**: [https://demo.inelabteamdev.com](https://demo.inelabteamdev.com)
 
 ---
