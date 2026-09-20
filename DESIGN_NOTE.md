@@ -1,62 +1,57 @@
-# Technical Design Note & Engineering Trade-offs
+# Frontend Technical Design Note
 
-**Project**: INE Product Price Tracker (Web Scraping)  
+**Project**: INE Product Price Tracker — Web Application & Analytics Dashboard  
 **Author**: Gourav Solanki  
-**Role**: Software Engineer Intern Assignment  
+**Role**: Software Engineer Intern Assessment  
+**Repository**: [https://github.com/gouravslnk/price-tracker-frontend](https://github.com/gouravslnk/price-tracker-frontend)  
+**Live Site**: [https://price-tracker-frontend-gray.vercel.app](https://price-tracker-frontend-gray.vercel.app)  
 
 ---
 
-## 1. How We Made the Scraping Reliable
+## 1. How We Made the Frontend Resilient & User-Centric
 
-The INE mock storefront is intentionally engineered with anti-bot friction, unpredictable latency, client-side mouse-movement challenges, and simulated upstream chaos (random `503`, `429`, and `401 unauthorized` responses). To make the scraping reliable across unattended runs, we implemented a multi-layered resilience architecture:
+The frontend dashboard serves as the central command center for tracking products, observing real-time price movements, and inspecting attempt-by-attempt diagnostic logs.
 
-### A. Two-Layer Architecture: Browser Navigation + Network Interception
-- Instead of relying solely on fragile DOM element selectors that can change or lag during hydration, we deployed **Playwright Chromium** to execute the page's JavaScript bundle (WASM proof-of-work, challenge solving) while simultaneously setting up a **Network Response Interceptor** (`page.on('response', ...)`).
-- As soon as the store's frontend successfully retrieves the encrypted payload `GET /api/products/:id/price` and session token `POST /api/session`, we intercept and decrypt the payload directly using our derived XOR decryption algorithm `SHA256("ine-mock-store-shared-k3y|enc|" + token)`. This prevents UI race conditions where the DOM renders late.
+### A. Adaptive Polling & Instant Query Invalidation
+- **Challenge**: Scrapes take between 4–15 seconds to execute. Users adding a product or triggering a refresh shouldn't be left wondering if an operation succeeded or be forced to manually refresh the page.
+- **Solution**: We integrated **TanStack React Query v5** with adaptive refetch intervals:
+  - **Fast Polling (2000ms)**: When any product in the dashboard is in a pending state (`current_price === null` or currently being scraped), the query polls every 2 seconds.
+  - **Background Polling (8000ms)**: Once all products have settled price observations, polling throttles down to 8 seconds to minimize server load.
+  - **Successive Staggered Invalidation**: Triggering "Add Product", "Refresh", or "Refresh All" immediately dispatches scheduled invalidations at 2s, 4s, 7s, and 11s to capture background scraper completions smoothly.
 
-### B. Client Challenge Reverse Engineering
-- The store’s client script (`index-B9UiQq4X.js`) requires mouse movements over the price area to satisfy:
-  1. Dwell time $\ge 600\text{ms}$
-  2. Number of moves $\ge 8$
-  3. Minimum interval between movement timestamps $\ge 40\text{ms}$ (`kr = 40`)
-- We automated `hoverPriceArea` to perform 12 smooth movement steps spaced by 55ms intervals (> 40ms throttle ceiling) and 720ms dwell time, consistently enabling the **REVEAL PRICE** button on attempt 1.
+### B. High-Contrast Monochrome Design & Clean Typography
+- **Design System**: Built with Tailwind CSS using a curated monochromatic color palette (neutral grays, stark zinc, subtle borders, and semantic indicators for stock/price movement).
+- **No Inappropriate Visuals**: Zero generic emojis; all visual states utilize clean SVG vector icons (`lucide-react`) and monospace data labels.
+- **Fluid Responsiveness**: Full grid-to-list layout toggles, responsive stat cards, collapsible mobile drawer, and accessible modal confirmation dialogs.
 
-### C. 2-Tier Failure & Flakiness Handling
-1. **Store Internal Layer**: The store UI has built-in retries (up to 6 attempts). If the store's internal retries are progressing, we wait for network resolution.
-2. **Outer Layer**: If an entire tab encounters a rate limit (`429`), network crash, or unrecoverable error, the scraper captures a diagnostic screenshot, immediately closes the browser context, and opens a clean, isolated browser context with jittered exponential backoff ($b \cdot 2^{\text{attempt}} + \text{jitter}$).
-
-### D. Strict Data Integrity & Validation
-- Prices and stock values are strictly validated before persisting to Supabase PostgreSQL:
-  - `price > 0` (non-null, finite number).
-  - `stock >= 0` (integer; `0` is valid and mapped to `OUT OF STOCK`).
-  - Corrupted or incomplete payloads are rejected with an explicit `ScraperError` and never overwrite last-known good data.
+### C. Honest Diagnostic Visibility & Historical Analysis
+- **Scrape Log Drawer / Modal**: Users can click any product to inspect historical observations, price trends, and full diagnostic logs (displaying HTTP status, attempt duration in ms, and specific error reasons).
+- **Price Delta Indicators**: Explicit calculation of price drops vs. price increases relative to the product's baseline price observation.
 
 ---
 
-## 2. Engineering Trade-offs Made
+## 2. Frontend Engineering Trade-offs
 
-| Decision / Feature | Trade-off Chosen | Rationale |
+| Decision | Trade-off Chosen | Rationale |
 | :--- | :--- | :--- |
-| **Playwright vs. Pure HTTP Fetching** | Browser Automation + Network Interception | The store employs dynamic WASM challenge verification, cookie checks, and encrypted API responses that require a browser runtime environment. |
-| **Sequential Batch Scrapes (`SCRAPE_CONCURRENCY=1`)** | Sequential 1-by-1 processing with 500ms cool-off | Free-tier hosting on Render provides 512 MB RAM. Running multiple concurrent headless browser instances risks OOM crashes. Sequential runs ensure 100% stability. |
-| **External Cron (`cron-job.org`) vs. Always-on Timer** | External Cron Service + Keep-Warm Ping | Free-tier cloud instances sleep after 15 minutes of inactivity. An external cron ensures scheduled 2-hour runs trigger reliably regardless of instance sleep state. |
-| **UI Polling Optimization** | Adaptive short-interval polling (2s on pending, 8s background) | Avoids overwhelming the backend while providing instantaneous UI updates when a user adds a product. |
+| **Client-Side Data Polling vs. WebSockets/SSE** | Adaptive TanStack Query Polling | Avoids persistent stateful socket connection overhead and reconnect complexity on serverless/sleepable free-tier backends while delivering near-instant UI updates. |
+| **Local Headed Toggle vs. Global State** | Localhost-Only Scraper Toggle in Navigation Bar | Shows the visible browser toggle only on `localhost` (for demo recordings and evaluations), and hides it cleanly on production Vercel builds where cloud servers cannot open display windows. |
+| **Optimistic Card Updates** | Instant card state updates + background sync | Immediately renders newly added products in a `SCRAPING...` state on the dashboard so the user gets instant feedback before the first price arrives. |
 
 ---
 
-## 3. What AI Tools Got Wrong on the First Attempt & How We Corrected It
+## 3. What AI Tools Got Wrong on the First Attempt & How We Fixed It
 
-### 1. The 40ms Mouse Movement Throttling Trap
-- **What AI Suggested**: Standard Playwright `page.hover('#reveal-button')` or rapid mouse movements in a loop (`for (let i=0; i<10; i++) page.mouse.move(...)` with 10ms delays).
-- **Why it Failed**: The store's compiled JavaScript (`Ar` anti-bot tracker) discards any mouse movement event where `timestamp - lastTimestamp < 40ms`. Rapid loops resulted in only 1–2 recorded moves, leaving the reveal button disabled.
-- **The Correction**: We reverse-engineered the compiled bundle, found `kr = 40` and `minMoves = 8`, and wrote a stepped movement curve with 55ms delays and 720ms dwell time.
+### 1. Static Query Invalidation & Stale Dashboard Prices
+- **What AI Generated**: A single `queryClient.invalidateQueries()` called immediately when the "Track Product" button was clicked.
+- **Why It Failed**: The backend returns `201 Created` immediately and runs Playwright asynchronously in the background. A single instant refetch fetched the product before the scraper finished, leaving the price blank until a full browser refresh.
+- **How We Fixed It**: Implemented dynamic adaptive polling in `useTrackedProducts()` (`refetchInterval: (q) => hasPending ? 2000 : 8000`) and staggered invalidation timers (2s, 4s, 7s, 11s).
 
-### 2. XOR Decryption Key Derivation Misinterpretation
-- **What AI Suggested**: Trying to decrypt the price payload with plain string keys or standard AES.
-- **Why it Failed**: The mock store derives its XOR keystream by concatenating a static shared key prefix with the ephemeral session token and hashing with SHA-256 (`SHA256("ine-mock-store-shared-k3y|enc|" + token)`).
-- **The Correction**: We extracted the exact byte-wise XOR unpacking routine and SHA-256 key schedule in `decrypt.js`, achieving 100% decryption accuracy.
+### 2. Confusing Browser Controls in Production
+- **What AI Generated**: Placing a generic "Visible Browser Mode" toggle in the header for all users.
+- **Why It Failed**: In production on Vercel/Render, cloud containers have no display server ($DISPLAY). Toggling visible mode in production caused confusion and potential launch errors.
+- **How We Fixed It**: Added `isLocalhost` environment checks in `Header.jsx` to render the button only on developer machines (`localhost:3000`) for recording evaluations, keeping the live production navbar clean.
 
-### 3. Missing Rootless Playwright Dependencies on Cloud Containers
-- **What AI Suggested**: Adding `npx playwright install --with-deps chromium` in Render build commands.
-- **Why it Failed**: `--with-deps` tries to run `apt-get` as root (`sudo`), which fails on rootless container platforms like Render.
-- **The Correction**: Configured standard `npx playwright install chromium` combined with `PLAYWRIGHT_BROWSERS_PATH=0` and Linux flags (`--no-sandbox`, `--disable-dev-shm-usage`) plus automated runtime fallback in `browser.js`
+### 3. Missing Empty & Loading States
+- **What AI Generated**: Basic unstyled table loading spinners.
+- **How We Fixed It**: Created custom skeleton loading components (`CardSkeleton`), descriptive empty states with action triggers (`EmptyState`), and custom dark/light mode toggle with smooth transitions.
