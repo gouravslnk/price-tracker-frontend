@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi } from '../api/productsApi.js';
+import { useScraperMode } from '../context/ScraperModeContext.jsx';
 
 export const QUERY_KEYS = {
   trackedProducts: ['tracked-products'],
@@ -77,9 +78,10 @@ export function useSearchCatalog(query) {
  */
 export function useTrackProduct() {
   const queryClient = useQueryClient();
+  const { isHeaded } = useScraperMode();
 
   return useMutation({
-    mutationFn: (payload) => productsApi.trackProduct(payload),
+    mutationFn: (payload) => productsApi.trackProduct({ headed: isHeaded, ...payload }),
     onSuccess: () => {
       // Invalidate immediately to show newly created item on dashboard
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trackedProducts });
@@ -114,9 +116,10 @@ export function useUntrackProduct() {
  */
 export function useManualScrape() {
   const queryClient = useQueryClient();
+  const { isHeaded } = useScraperMode();
 
   return useMutation({
-    mutationFn: (productId) => productsApi.manualScrape(productId),
+    mutationFn: (productId) => productsApi.manualScrape(productId, isHeaded),
     onSuccess: (res, productId) => {
       if (res && res.success) {
         queryClient.setQueryData(QUERY_KEYS.trackedProducts, (old) => {
@@ -153,9 +156,10 @@ export function useManualScrape() {
  */
 export function useRefreshAllProducts() {
   const queryClient = useQueryClient();
+  const { isHeaded } = useScraperMode();
 
   return useMutation({
-    mutationFn: () => productsApi.refreshAllProducts(),
+    mutationFn: () => productsApi.refreshAllProducts(isHeaded),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trackedProducts });
       // Schedule successive refetches while Playwright batch workers run

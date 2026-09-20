@@ -65,8 +65,9 @@ export const productsApi = {
   /**
    * Trigger manual price refresh for a tracked product
    */
-  async manualScrape(productId) {
-    const res = await request(`/products/scrape/${encodeURIComponent(productId)}`, {
+  async manualScrape(productId, isHeaded = undefined) {
+    const query = isHeaded !== undefined ? `?headed=${isHeaded}` : '';
+    const res = await request(`/products/scrape/${encodeURIComponent(productId)}${query}`, {
       method: 'POST'
     });
     return res;
@@ -75,8 +76,9 @@ export const productsApi = {
   /**
    * Trigger full batch refresh for ALL tracked products (Cron/Manual trigger)
    */
-  async refreshAllProducts() {
-    const res = await request('/scrape/trigger', {
+  async refreshAllProducts(isHeaded = undefined) {
+    const query = isHeaded !== undefined ? `?headed=${isHeaded}` : '';
+    const res = await request(`/scrape/trigger${query}`, {
       method: 'POST'
     });
     return res;

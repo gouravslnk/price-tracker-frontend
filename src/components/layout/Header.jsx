@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Plus, Sun, Moon, Menu, X } from 'lucide-react';
+import { Plus, Sun, Moon, Menu, X, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext.jsx';
+import { useScraperMode } from '../../context/ScraperModeContext.jsx';
 import { Button } from '../common/Button.jsx';
 
 export const Header = () => {
   const { theme, toggleTheme } = useTheme();
+  const { isHeaded, toggleHeaded } = useScraperMode();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -60,8 +62,33 @@ export const Header = () => {
           ))}
         </nav>
 
-        {/* Actions (Add Product + Theme Toggle) */}
+        {/* Actions (Headed Toggle + Add Product + Theme Toggle) */}
         <div className="hidden md:flex items-center gap-3">
+          
+          {/* Observable Headed Browser Run Toggle Button */}
+          <button
+            onClick={toggleHeaded}
+            className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
+              isHeaded
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 dark:border-emerald-500/40 hover:bg-emerald-500/20'
+                : 'bg-neutral-100 dark:bg-ine-900 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-ine-800 hover:text-neutral-950 dark:hover:text-white'
+            }`}
+            title={isHeaded ? "Visible Browser Mode ON: Scraper browser windows will open on screen" : "Headless Mode: Scraper runs in background without opening a window"}
+          >
+            {isHeaded ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Browser: Visible</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Browser: Headless</span>
+              </>
+            )}
+          </button>
+
           <Link to="/products/add">
             <Button size="sm" variant="primary">
               <Plus className="w-4 h-4" />
@@ -81,6 +108,18 @@ export const Header = () => {
 
         {/* Mobile menu button */}
         <div className="flex md:hidden items-center gap-2">
+          <button
+            onClick={toggleHeaded}
+            className={`p-2 border text-xs font-mono transition-colors ${
+              isHeaded
+                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                : 'text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-ine-800'
+            }`}
+            title="Toggle visible browser mode"
+          >
+            {isHeaded ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+
           <button
             onClick={toggleTheme}
             className="p-2 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-ine-800"
