@@ -17,6 +17,12 @@ export const Header = () => {
     { name: 'Tracked Products', path: '/products' }
   ];
 
+  const isLocalhost = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.endsWith('.local')
+  );
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-ine-950/95 backdrop-blur-xs border-b border-neutral-200 dark:border-ine-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -61,32 +67,34 @@ export const Header = () => {
           ))}
         </nav>
 
-        {/* Actions (Headed Toggle + Theme Toggle) */}
+        {/* Actions (Local Headed Toggle + Theme Toggle) */}
         <div className="hidden md:flex items-center gap-3">
           
-          {/* Observable Headed Browser Run Toggle Button */}
-          <button
-            onClick={toggleHeaded}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
-              isHeaded
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 dark:border-emerald-500/40 hover:bg-emerald-500/20'
-                : 'bg-neutral-100 dark:bg-ine-900 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-ine-800 hover:text-neutral-950 dark:hover:text-white'
-            }`}
-            title={isHeaded ? "Visible Browser Mode ON: Scraper browser windows will open on screen" : "Headless Mode: Scraper runs in background without opening a window"}
-          >
-            {isHeaded ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <Eye className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Browser: Visible</span>
-              </>
-            ) : (
-              <>
-                <EyeOff className="w-3.5 h-3.5 text-neutral-400" />
-                <span>Browser: Headless</span>
-              </>
-            )}
-          </button>
+          {/* Observable Headed Browser Run Toggle Button (Localhost Only for Screen Recording) */}
+          {isLocalhost && (
+            <button
+              onClick={toggleHeaded}
+              className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                isHeaded
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 dark:border-emerald-500/40 hover:bg-emerald-500/20'
+                  : 'bg-neutral-100 dark:bg-ine-900 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-ine-800 hover:text-neutral-950 dark:hover:text-white'
+              }`}
+              title={isHeaded ? "Visible Browser Mode ON: Scraper browser windows will open on screen" : "Headless Mode: Scraper runs in background without opening a window"}
+            >
+              {isHeaded ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Browser: Visible</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>Browser: Headless</span>
+                </>
+              )}
+            </button>
+          )}
 
           <button
             onClick={toggleTheme}
@@ -100,17 +108,19 @@ export const Header = () => {
 
         {/* Mobile menu button */}
         <div className="flex md:hidden items-center gap-2">
-          <button
-            onClick={toggleHeaded}
-            className={`p-2 border text-xs font-mono transition-colors ${
-              isHeaded
-                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
-                : 'text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-ine-800'
-            }`}
-            title="Toggle visible browser mode"
-          >
-            {isHeaded ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-          </button>
+          {isLocalhost && (
+            <button
+              onClick={toggleHeaded}
+              className={`p-2 border text-xs font-mono transition-colors ${
+                isHeaded
+                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                  : 'text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-ine-800'
+              }`}
+              title="Toggle visible browser mode"
+            >
+              {isHeaded ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </button>
+          )}
 
           <button
             onClick={toggleTheme}
