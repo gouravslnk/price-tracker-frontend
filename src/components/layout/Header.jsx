@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Plus, Sun, Moon, Menu, X, Eye, EyeOff } from 'lucide-react';
+import { Sun, Moon, Menu, X, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { useScraperMode } from '../../context/ScraperModeContext.jsx';
-import { Button } from '../common/Button.jsx';
 
 export const Header = () => {
   const { theme, toggleTheme } = useTheme();
@@ -62,7 +61,7 @@ export const Header = () => {
           ))}
         </nav>
 
-        {/* Actions (Headed Toggle + Add Product + Theme Toggle) */}
+        {/* Actions (Headed Toggle + Theme Toggle) */}
         <div className="hidden md:flex items-center gap-3">
           
           {/* Observable Headed Browser Run Toggle Button */}
@@ -88,13 +87,6 @@ export const Header = () => {
               </>
             )}
           </button>
-
-          <Link to="/products/add">
-            <Button size="sm" variant="primary">
-              <Plus className="w-4 h-4" />
-              <span>Add Product</span>
-            </Button>
-          </Link>
 
           <button
             onClick={toggleTheme}
@@ -155,14 +147,6 @@ export const Header = () => {
               {link.name}
             </Link>
           ))}
-          <div className="pt-2">
-            <Link to="/products/add" onClick={() => setMobileMenuOpen(false)}>
-              <Button size="sm" variant="primary" className="w-full">
-                <Plus className="w-4 h-4" />
-                <span>Add Product</span>
-              </Button>
-            </Link>
-          </div>
         </div>
       )}
     </header>
